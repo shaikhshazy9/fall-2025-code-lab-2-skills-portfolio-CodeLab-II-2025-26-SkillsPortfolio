@@ -1,6 +1,19 @@
 from tkinter import *
 from tkinter import messagebox
 import random
+import os
+
+# Change working directory to where this script is located
+# This make sures images folder is found correctly
+script_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_dir)
+
+# This is to import PIL for images 
+try:
+    from PIL import Image, ImageTk
+    PIL_AVAILABLE = True
+except:
+    PIL_AVAILABLE = False
 
 # Create main window
 root = Tk()
@@ -8,12 +21,56 @@ root.title("Maths Quiz")
 root.geometry("700x500")
 root.resizable(False, False)
 
+# Store image references
+image_references = {}
+
 # Global variables
 current_questions = []
 current_index = 0
 current_score = 0
 current_difficulty = ""
 current_attempt = 1
+
+# ============================================================================
+# IMAGE LOADING HELPER FUNCTION
+# ============================================================================
+
+def load_background_image(frame, image_filename, fallback_color):
+    """
+    Loads a background image if available, otherwise uses fallback color.
+    
+    Parameters:
+        frame: The frame to add background to
+        image_filename: Name of the image file (put in 'images' folder)
+        fallback_color: Color to use if image not found
+    """
+    if PIL_AVAILABLE:
+        try:
+            # Try to load image from 'images' folder
+            img = Image.open(f"images/{image_filename}")
+            img = img.resize((700, 500))
+            photo = ImageTk.PhotoImage(img)
+            
+            # Store reference to prevent deleting
+            image_references[image_filename] = photo
+            
+            # Create label with image
+            bg_label = Label(frame, image=photo)
+            bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+            
+            return True
+        except:
+            frame.config(bg=fallback_color)
+            return False
+    else:
+        # PIL not available, use color
+        frame.config(bg=fallback_color)
+        return False
+
+
+# ============================================================================
+# REQUIRED FUNCTIONS 
+# ============================================================================
 
 def displayMenu():
     """
@@ -23,8 +80,10 @@ def displayMenu():
     # Clear the screen
     clear_screen()
     
-    # Set background color
-    task_frame.config(bg="#e0f2fe")
+    # Load background image or use color, I'VE ADDED CODE FOR BOTH LIKE IF THE IMAGE DOESN'T LOADS BACKGROUND COLOR WILL COME UP. 
+    # I did this because I was having trouble in adding images, but then I sorted it out. 
+    # This feature is with all the background images. 
+    load_background_image(task_frame, "difficulty_background.png", "#e0f2fe")
     
     # Title
     title = Label(task_frame, text="Maths Quiz", 
@@ -119,8 +178,8 @@ def displayResults(score):
     # Clear screen
     clear_screen()
     
-    # Set background
-    task_frame.config(bg="#f0fdf4")
+    # Load results background image or use color
+    load_background_image(task_frame, "results_background.jpg", "#f0fdf4")
     
     # Calculate rank
     if score >= 90:
@@ -291,13 +350,13 @@ def show_question():
     # Get current question
     question, correct_answer = current_questions[current_index]
     
-    # Set background color based on difficulty
+    # Load background image based on difficulty or use color
     if current_difficulty == "Easy":
-        task_frame.config(bg="#dcfce7")
+        load_background_image(task_frame, "easy_background.png", "#dcfce7")
     elif current_difficulty == "Moderate":
-        task_frame.config(bg="#fef3c7")
+        load_background_image(task_frame, "moderate_background.jpg", "#fef3c7")
     else:
-        task_frame.config(bg="#fee2e2")
+        load_background_image(task_frame, "advanced_background.jpg", "#fee2e2")
     
     # Progress bar
     progress_text = f"Question {current_index + 1}/10  |  Score: {current_score}/100"
@@ -325,7 +384,7 @@ def show_question():
     answer_entry.pack(pady=10)
     answer_entry.focus()
     
-    # Feedback label (initially empty)
+    # Feedback label
     feedback_label = Label(task_frame, text="", 
                           font=("Arial", 13, "bold"),
                           bg=task_frame.cget("bg"))
@@ -389,7 +448,7 @@ def show_question():
            width=12,
            command=confirm_exit).pack(pady=5)
     
-    # Enter key to submit
+    # Bind Enter key to submit
     answer_entry.bind('<Return>', lambda event: submit_answer())
 
 
@@ -409,11 +468,22 @@ task_frame.place(relwidth=1, relheight=1)
 # HOME SCREEN WITH MATH DECORATIONS
 # ============================================================================
 
-# Create canvas for math decorations
+# Create canvas first
 home_canvas = Canvas(home_frame, width=700, height=500, bg="#dbeafe", highlightthickness=0)
 home_canvas.pack(fill=BOTH, expand=True)
 
-# Adds floating math symbols in background
+# Try to load home background image on canvas
+if PIL_AVAILABLE:
+    try:
+        img = Image.open("images/home_background.png")
+        img = img.resize((700, 500))
+        photo = ImageTk.PhotoImage(img)
+        image_references['home_bg'] = photo
+        home_canvas.create_image(0, 0, image=photo, anchor=NW)
+    except:
+        pass  # Use default canvas color
+
+# Add floating math symbols in background
 math_symbols = [
     ("+", 80, 100, 30, "#3b82f6"),
     ("-", 600, 120, 30, "#8b5cf6"),
@@ -431,7 +501,7 @@ for symbol, x, y, size, color in math_symbols:
     home_canvas.create_text(x, y, text=symbol, 
                            font=("Arial", size, "bold"), 
                            fill=color, 
-                           stipple="gray50")  # Makes it semi transparent
+                           stipple="gray50")  
 
 # Add math equation decorations
 equations = [
